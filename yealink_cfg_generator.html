@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yealink SIP Phone Configuration File Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        yealink: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        code, pre { font-family: 'Fira Code', monospace; }
+        /* Custom scrollbar for preview */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(71, 85, 105, 1); }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-x-hidden text-slate-200 bg-slate-950">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-xl text-emerald-400">
+                    <i class="fa-solid fa-phone-flip text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-white leading-none">Yealink <span class="text-emerald-400">CFG Master</span></h1>
+                    <p class="text-xs text-slate-400 mt-0.5">Provisioning Configuration File Generator</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center space-x-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg transition">
+                    <i class="fa-brands fa-github text-sm"></i>
+                    <span>Open Source</span>
+                </a>
+                <button id="importBtn" onclick="document.getElementById('fileInput').click()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-file-import"></i>
+                    <span class="hidden sm:inline">Import JSON</span>
+                </button>
+                <input type="file" id="fileInput" class="hidden" accept=".json" onchange="importConfiguration(event)">
+                <button onclick="exportConfiguration()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-file-export"></i>
+                    <span class="hidden sm:inline">Export JSON</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- LEFT COLUMN: Form Controls & Configurations (7 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+
+            <!-- Model & Firmware Header Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-sliders text-emerald-400"></i>
+                        <h2 class="font-semibold text-slate-100">Target Device Specs</h2>
+                    </div>
+                    <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20 font-mono">v1.0.0</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Phone Model</label>
+                        <select id="phoneModel" onchange="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <optgroup label="T2 Series (Entry)">
+                                <option value="T21P E2" selected>Yealink T21 / T21P E2</option>
+                                <option value="T23G">Yealink T23G</option>
+                                <option value="T27G">Yealink T27G</option>
+                                <option value="T29G">Yealink T29G</option>
+                            </optgroup>
+                            <optgroup label="T3 Series (Modern Essential)">
+                                <option value="T30">Yealink T30 / T30P</option>
+                                <option value="T31G">Yealink T31P / T31G</option>
+                                <option value="T33G">Yealink T33G</option>
+                            </optgroup>
+                            <optgroup label="T4 Series (Executive/Business)">
+                                <option value="T42S">Yealink T41S / T42S</option>
+                                <option value="T46S">Yealink T46S / T46U</option>
+                                <option value="T48S">Yealink T48S / T48U</option>
+                            </optgroup>
+                            <optgroup label="T5 Series (Prime Business)">
+                                <option value="T53W">Yealink T53 / T53W</option>
+                                <option value="T54W">Yealink T54W</option>
+                                <option value="T57W">Yealink T57W</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Firmware Syntax Mode</label>
+                        <select id="fwVersion" onchange="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="1.0.0.1" selected>#!version:1.0.0.1 (V8X / V85+ Standard)</option>
+                            <option value="v80">#!version:1.0.0.0 (V80 Legacy)</option>
+                            <option value="v70"># Standard V7X Legacy</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Categories Accordion / Controls -->
+            <div class="space-y-4">
+
+                <!-- 1. Phone Lock & Hardware Security -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+                    <button onclick="toggleSection('sec-phone-lock')" class="w-full px-5 py-4 flex items-center justify-between bg-slate-900 hover:bg-slate-800/60 transition text-left">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-center">
+                                <i class="fa-solid fa-lock text-sm"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-medium text-sm text-slate-200">Phone Lock & System Security</h3>
+                                <p class="text-xs text-slate-400">PIN lockouts, factory password controls & physical key blocks</p>
+                            </div>
+                        </div>
+                        <i id="icon-sec-phone-lock" class="fa-solid fa-chevron-down text-slate-500 text-xs transition-transform duration-200"></i>
+                    </button>
+
+                    <div id="sec-phone-lock" class="px-5 pb-5 pt-2 border-t border-slate-800/60 space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="flex items-center justify-between p-3 bg-slate-950/60 rounded-lg border border-slate-800">
+                                <div>
+                                    <label class="text-xs font-medium text-slate-300 block">Enable Full Phone Lock</label>
+                                    <span class="text-[10px] text-slate-500">phone_setting.phone_lock.enable</span>
+                                </div>
+                                <input type="checkbox" id="lockEnable" checked onchange="updateConfig()" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Locked Key Type</label>
+                                <select id="lockKeyType" onchange="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                    <option value="0">0 - Lock Function Keys only</option>
+                                    <option value="1">1 - Lock All Keys</option>
+                                    <option value="2" selected>2 - Lock MENU Key Strictly</option>
+                                    <option value="3">3 - Lock Answer Call only</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Lock Timeout (Seconds)</label>
+                                <input type="number" id="lockTimeout" value="0" min="0" max="3600" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <span class="text-[10px] text-slate-500">0 = Immediate Lock on idle</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Unlock PIN Code</label>
+                                <input type="text" id="unlockPin" value="1234" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 pt-2 border-t border-slate-800/40">
+                            <div class="flex items-center justify-between p-2.5 bg-slate-950/40 rounded-lg border border-slate-800/80">
+                                <div>
+                                    <label class="text-xs font-medium text-slate-300 block">Allow DND (Do Not Disturb)</label>
+                                    <span class="text-[10px] text-slate-500">features.dnd.allow</span>
+                                </div>
+                                <input type="checkbox" id="dndAllow" onchange="updateConfig()" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                            </div>
+
+                            <div class="flex items-center justify-between p-2.5 bg-slate-950/40 rounded-lg border border-slate-800/80">
+                                <div>
+                                    <label class="text-xs font-medium text-slate-300 block">Allow Factory Password Reset</label>
+                                    <span class="text-[10px] text-slate-500">features.factory_pwd_enable</span>
+                                </div>
+                                <input type="checkbox" id="factoryPwdEnable" onchange="updateConfig()" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                            </div>
+
+                            <div class="flex items-center justify-between p-2.5 bg-slate-950/40 rounded-lg border border-slate-800/80">
+                                <div>
+                                    <label class="text-xs font-medium text-slate-300 block">Allow Hard Reset by Long Press OK</label>
+                                    <span class="text-[10px] text-slate-500">features.reset_by_long_press_enable</span>
+                                </div>
+                                <input type="checkbox" id="longPressResetEnable" onchange="updateConfig()" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. SIP Account 1 Configuration -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+                    <button onclick="toggleSection('sec-account1')" class="w-full px-5 py-4 flex items-center justify-between bg-slate-900 hover:bg-slate-800/60 transition text-left">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center">
+                                <i class="fa-solid fa-network-wired text-sm"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-medium text-sm text-slate-200">SIP Account 1 Setup</h3>
+                                <p class="text-xs text-slate-400">PBX Registration, SIP Server, Extension & Credentials</p>
+                            </div>
+                        </div>
+                        <i id="icon-sec-account1" class="fa-solid fa-chevron-down text-slate-500 text-xs transition-transform duration-200"></i>
+                    </button>
+
+                    <div id="sec-account1" class="px-5 pb-5 pt-2 border-t border-slate-800/60 space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-slate-950/60 rounded-lg border border-slate-800">
+                            <div>
+                                <label class="text-xs font-medium text-slate-300 block">Enable Account 1</label>
+                                <span class="text-[10px] text-slate-500">account.1.enable</span>
+                            </div>
+                            <input type="checkbox" id="acc1Enable" checked onchange="updateConfig()" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Label / Display Name</label>
+                                <input type="text" id="acc1Label" value="Ext 101" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">SIP Extension / User ID</label>
+                                <input type="text" id="acc1User" value="101" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Register Name</label>
+                                <input type="text" id="acc1RegName" value="101" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">SIP Password</label>
+                                <input type="password" id="acc1Pwd" value="SecretPass123" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">SIP Server Address / Host</label>
+                                <input type="text" id="acc1Server" value="pbx.example.com" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">SIP Server Port</label>
+                                <input type="number" id="acc1Port" value="5060" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Transport Type</label>
+                            <select id="acc1Transport" onchange="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="0" selected>0 - UDP</option>
+                                <option value="1">1 - TCP</option>
+                                <option value="2">2 - TLS</option>
+                                <option value="3">3 - DNS-SRV</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Provisioning & Server URLs -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+                    <button onclick="toggleSection('sec-autop')" class="w-full px-5 py-4 flex items-center justify-between bg-slate-900 hover:bg-slate-800/60 transition text-left">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center">
+                                <i class="fa-solid fa-cloud-arrow-down text-sm"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-medium text-sm text-slate-200">Auto-Provisioning & XML Remote Phonebook</h3>
+                                <p class="text-xs text-slate-400">Server URL, update mode & remote directory feeds</p>
+                            </div>
+                        </div>
+                        <i id="icon-sec-autop" class="fa-solid fa-chevron-down text-slate-500 text-xs transition-transform duration-200"></i>
+                    </button>
+
+                    <div id="sec-autop" class="px-5 pb-5 pt-2 border-t border-slate-800/60 space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Auto Provision Server URL</label>
+                            <input type="text" id="autoPUrl" value="http://prov.example.com/yealink" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Remote Phonebook 1 URL</label>
+                                <input type="text" id="remoteXmlUrl" value="http://prov.example.com/xml/directory.xml" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Phonebook Name</label>
+                                <input type="text" id="remoteXmlName" value="Company Directory" oninput="updateConfig()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Custom Parameters Adder -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-plus-minus text-amber-400"></i>
+                            <h3 class="font-medium text-sm text-slate-200">Custom Key / Value Overrides</h3>
+                        </div>
+                        <button onclick="addCustomParam()" class="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-lg transition flex items-center space-x-1">
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                            <span>Add Parameter</span>
+                        </button>
+                    </div>
+
+                    <p class="text-xs text-slate-400">Add any additional explicit Yealink configuration syntax key/value pairs.</p>
+
+                    <div id="customParamsContainer" class="space-y-2">
+                        <!-- Dynamic custom rows will be injected here -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- RIGHT COLUMN: Realtime Preview & Code Output (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col h-full min-h-[550px]">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl flex-1 flex flex-col overflow-hidden shadow-2xl sticky top-20">
+                
+                <!-- Preview Toolbar Header -->
+                <div class="bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                        <span class="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
+                        <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+                        <span id="cfgFilename" class="text-xs font-mono text-slate-400 ml-2">y000000000000.cfg</span>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button onclick="copyToClipboard()" id="copyBtn" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+                            <i class="fa-regular fa-copy"></i>
+                            <span>Copy</span>
+                        </button>
+                        <button onclick="downloadCfgFile()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-3 py-1.5 rounded-lg transition shadow-md shadow-emerald-900/20 flex items-center space-x-1">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Download .cfg</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Code View Display -->
+                <div class="relative flex-1 bg-slate-950 p-4 overflow-auto">
+                    <pre id="cfgOutput" class="text-xs text-slate-300 leading-relaxed font-mono whitespace-pre selection:bg-emerald-500 selection:text-slate-950"></pre>
+                </div>
+
+                <!-- Footer Stats -->
+                <div class="bg-slate-900 border-t border-slate-800 px-4 py-2 flex items-center justify-between text-[11px] text-slate-500">
+                    <span id="lineCount">Lines: 0</span>
+                    <span id="charCount">Characters: 0</span>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-emerald-500 text-slate-950 px-4 py-2.5 rounded-xl font-medium text-xs shadow-xl flex items-center space-x-2 transition-opacity duration-300 opacity-0 pointer-events-none z-50">
+        <i class="fa-solid fa-circle-check text-sm"></i>
+        <span id="toastMsg">Action completed successfully</span>
+    </div>
+
+    <!-- Application Engine Logic -->
+    <script>
+        // State for dynamic parameters
+        let customParams = [
+            { key: 'local_time.time_format', value: '1', desc: '12-Hour (0) or 24-Hour (1) clock format' }
+        ];
+
+        // Accordion toggle helper
+        function toggleSection(id) {
+            const el = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            if (el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+                icon.classList.remove('rotate-180');
+            } else {
+                el.classList.add('hidden');
+                icon.classList.add('rotate-180');
+            }
+        }
+
+        // Custom Parameter Management
+        function renderCustomParams() {
+            const container = document.getElementById('customParamsContainer');
+            container.innerHTML = '';
+
+            customParams.forEach((param, index) => {
+                const row = document.createElement('div');
+                row.className = 'grid grid-cols-12 gap-2 items-center bg-slate-950/60 p-2 rounded-lg border border-slate-800/80';
+                row.innerHTML = `
+                    <div class="col-span-5">
+                        <input type="text" value="${escapeHtml(param.key)}" oninput="updateCustomParam(${index}, 'key', this.value)" placeholder="parameter.key" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="col-span-4">
+                        <input type="text" value="${escapeHtml(param.value)}" oninput="updateCustomParam(${index}, 'value', this.value)" placeholder="value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="col-span-2">
+                        <input type="text" value="${escapeHtml(param.desc || '')}" oninput="updateCustomParam(${index}, 'desc', this.value)" placeholder="Comment" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-400 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="col-span-1 flex justify-center">
+                        <button onclick="removeCustomParam(${index})" class="text-slate-500 hover:text-red-400 p-1 transition">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function addCustomParam() {
+            customParams.push({ key: '', value: '', desc: '' });
+            renderCustomParams();
+            updateConfig();
+        }
+
+        function updateCustomParam(index, field, val) {
+            customParams[index][field] = val;
+            updateConfig();
+        }
+
+        function removeCustomParam(index) {
+            customParams.splice(index, 1);
+            renderCustomParams();
+            updateConfig();
+        }
+
+        function escapeHtml(str) {
+            return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Main Configuration File Generator Engine
+        function generateCfgText() {
+            const model = document.getElementById('phoneModel').value;
+            const fwMode = document.getElementById('fwVersion').value;
+
+            // Header determination
+            let header = '#!version:1.0.0.1';
+            if (fwMode === 'v80') header = '#!version:1.0.0.0';
+            if (fwMode === 'v70') header = '# Yealink SIP Phone Configuration File (V7X Legacy)';
+
+            let lines = [];
+            lines.push(header);
+            lines.push('');
+            lines.push(`#####################################################################`);
+            lines.push(`## Yealink ${model} Custom Configuration File`);
+            lines.push(`## Generated via Yealink CFG Master`);
+            lines.push(`#####################################################################`);
+            lines.push('');
+
+            // 1. Phone Lock Controls
+            const lockEnable = document.getElementById('lockEnable').checked ? '1' : '0';
+            const lockKeyType = document.getElementById('lockKeyType').value;
+            const lockTimeout = document.getElementById('lockTimeout').value || '0';
+            const unlockPin = document.getElementById('unlockPin').value || '1234';
+
+            lines.push('# Enable full phone lock system (0 - Disabled, 1 - Enabled)');
+            lines.push(`phone_setting.phone_lock.enable = ${lockEnable}`);
+            lines.push('');
+
+            lines.push('# 0 - Lock Function Keys, 1 - Lock All Keys, 2 - Strictly locks out physical MENU key');
+            lines.push(`phone_setting.phone_lock.lock_key_type = ${lockKeyType}`);
+            lines.push('');
+
+            lines.push('# Force lock to activate (0 = Instant idle timeout delay)');
+            lines.push(`phone_setting.phone_lock.lock_time_out = ${lockTimeout}`);
+            lines.push('');
+
+            lines.push('# The exact numeric unlock PIN required on screen/menu access');
+            lines.push(`phone_setting.phone_lock.unlock_pin = ${unlockPin}`);
+            lines.push('');
+
+            // Feature Switches
+            const dndAllow = document.getElementById('dndAllow').checked ? '1' : '0';
+            const factoryPwdEnable = document.getElementById('factoryPwdEnable').checked ? '1' : '0';
+            const longPressReset = document.getElementById('longPressResetEnable').checked ? '1' : '0';
+
+            lines.push('# Hardware security & feature overrides');
+            lines.push(`features.dnd.allow = ${dndAllow}`);
+            lines.push(`features.factory_pwd_enable = ${factoryPwdEnable}`);
+            lines.push(`features.reset_by_long_press_enable = ${longPressReset}`);
+            lines.push('');
+
+            // 2. SIP Account 1
+            const acc1Enable = document.getElementById('acc1Enable').checked ? '1' : '0';
+            if (acc1Enable === '1') {
+                lines.push('#####################################################################');
+                lines.push('## Account 1 Configuration');
+                lines.push('#####################################################################');
+                lines.push(`account.1.enable = 1`);
+                lines.push(`account.1.label = ${document.getElementById('acc1Label').value}`);
+                lines.push(`account.1.display_name = ${document.getElementById('acc1Label').value}`);
+                lines.push(`account.1.auth_name = ${document.getElementById('acc1RegName').value}`);
+                lines.push(`account.1.user_name = ${document.getElementById('acc1User').value}`);
+                lines.push(`account.1.password = ${document.getElementById('acc1Pwd').value}`);
+                lines.push(`account.1.sip_server.1.address = ${document.getElementById('acc1Server').value}`);
+                lines.push(`account.1.sip_server.1.port = ${document.getElementById('acc1Port').value}`);
+                lines.push(`account.1.sip_server.1.transport_type = ${document.getElementById('acc1Transport').value}`);
+                lines.push('');
+            }
+
+            // 3. Auto Provisioning & Directories
+            const autoPUrl = document.getElementById('autoPUrl').value;
+            const remoteXmlUrl = document.getElementById('remoteXmlUrl').value;
+            const remoteXmlName = document.getElementById('remoteXmlName').value;
+
+            if (autoPUrl || remoteXmlUrl) {
+                lines.push('#####################################################################');
+                lines.push('## Auto-Provisioning & Remote Directory Feeds');
+                lines.push('#####################################################################');
+                if (autoPUrl) lines.push(`auto_provision.server.url = ${autoPUrl}`);
+                if (remoteXmlUrl) {
+                    lines.push(`remote_phonebook.data.1.url = ${remoteXmlUrl}`);
+                    lines.push(`remote_phonebook.data.1.name = ${remoteXmlName}`);
+                }
+                lines.push('');
+            }
+
+            // 4. Custom Parameters
+            if (customParams.length > 0) {
+                let validParams = customParams.filter(p => p.key && p.key.trim() !== '');
+                if (validParams.length > 0) {
+                    lines.push('#####################################################################');
+                    lines.push('## Custom Overrides');
+                    lines.push('#####################################################################');
+                    validParams.forEach(p => {
+                        if (p.desc) lines.push(`# ${p.desc}`);
+                        lines.push(`${p.key.trim()} = ${p.value.trim()}`);
+                    });
+                    lines.push('');
+                }
+            }
+
+            return lines.join('\n');
+        }
+
+        function updateConfig() {
+            const rawText = generateCfgText();
+            const outputEl = document.getElementById('cfgOutput');
+            outputEl.innerHTML = highlightCfgSyntax(rawText);
+
+            // Update stats
+            const lines = rawText.split('\n').length;
+            document.getElementById('lineCount').textContent = `Lines: ${lines}`;
+            document.getElementById('charCount').textContent = `Characters: ${rawText.length}`;
+
+            // Update recommended filename based on model
+            const model = document.getElementById('phoneModel').value.replace(/\s+/g, '_');
+            document.getElementById('cfgFilename').textContent = `${model.toLowerCase()}_mac.cfg`;
+        }
+
+        // Simple syntax highlighter for Yealink CFG key/value & comments
+        function highlightCfgSyntax(text) {
+            const escaped = escapeHtml(text);
+            return escaped.split('\n').map(line => {
+                if (line.trim().startsWith('#')) {
+                    return `<span class="text-slate-500 italic">${line}</span>`;
+                } else if (line.includes('=')) {
+                    const parts = line.split('=');
+                    const key = parts[0];
+                    const val = parts.slice(1).join('=');
+                    return `<span class="text-emerald-400 font-medium">${key}</span>=<span class="text-amber-300">${val}</span>`;
+                }
+                return line;
+            }).join('\n');
+        }
+
+        // Clipboard Action
+        function copyToClipboard() {
+            const text = generateCfgText();
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            showToast('Configuration copied to clipboard!');
+        }
+
+        // Download .cfg File
+        function downloadCfgFile() {
+            const text = generateCfgText();
+            const filename = document.getElementById('cfgFilename').textContent;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            showToast(`Downloaded ${filename}`);
+        }
+
+        // Export State to JSON template
+        function exportConfiguration() {
+            const data = {
+                phoneModel: document.getElementById('phoneModel').value,
+                fwVersion: document.getElementById('fwVersion').value,
+                lockEnable: document.getElementById('lockEnable').checked,
+                lockKeyType: document.getElementById('lockKeyType').value,
+                lockTimeout: document.getElementById('lockTimeout').value,
+                unlockPin: document.getElementById('unlockPin').value,
+                dndAllow: document.getElementById('dndAllow').checked,
+                factoryPwdEnable: document.getElementById('factoryPwdEnable').checked,
+                longPressResetEnable: document.getElementById('longPressResetEnable').checked,
+                acc1Enable: document.getElementById('acc1Enable').checked,
+                acc1Label: document.getElementById('acc1Label').value,
+                acc1User: document.getElementById('acc1User').value,
+                acc1RegName: document.getElementById('acc1RegName').value,
+                acc1Pwd: document.getElementById('acc1Pwd').value,
+                acc1Server: document.getElementById('acc1Server').value,
+                acc1Port: document.getElementById('acc1Port').value,
+                acc1Transport: document.getElementById('acc1Transport').value,
+                autoPUrl: document.getElementById('autoPUrl').value,
+                remoteXmlUrl: document.getElementById('remoteXmlUrl').value,
+                remoteXmlName: document.getElementById('remoteXmlName').value,
+                customParams: customParams
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `yealink_config_preset.json`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            showToast('Preset exported successfully!');
+        }
+
+        // Import State from JSON template
+        function importConfiguration(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.phoneModel) document.getElementById('phoneModel').value = data.phoneModel;
+                    if (data.fwVersion) document.getElementById('fwVersion').value = data.fwVersion;
+                    if (data.lockEnable !== undefined) document.getElementById('lockEnable').checked = data.lockEnable;
+                    if (data.lockKeyType) document.getElementById('lockKeyType').value = data.lockKeyType;
+                    if (data.lockTimeout) document.getElementById('lockTimeout').value = data.lockTimeout;
+                    if (data.unlockPin) document.getElementById('unlockPin').value = data.unlockPin;
+                    if (data.dndAllow !== undefined) document.getElementById('dndAllow').checked = data.dndAllow;
+                    if (data.factoryPwdEnable !== undefined) document.getElementById('factoryPwdEnable').checked = data.factoryPwdEnable;
+                    if (data.longPressResetEnable !== undefined) document.getElementById('longPressResetEnable').checked = data.longPressResetEnable;
+                    if (data.acc1Enable !== undefined) document.getElementById('acc1Enable').checked = data.acc1Enable;
+                    if (data.acc1Label) document.getElementById('acc1Label').value = data.acc1Label;
+                    if (data.acc1User) document.getElementById('acc1User').value = data.acc1User;
+                    if (data.acc1RegName) document.getElementById('acc1RegName').value = data.acc1RegName;
+                    if (data.acc1Pwd) document.getElementById('acc1Pwd').value = data.acc1Pwd;
+                    if (data.acc1Server) document.getElementById('acc1Server').value = data.acc1Server;
+                    if (data.acc1Port) document.getElementById('acc1Port').value = data.acc1Port;
+                    if (data.acc1Transport) document.getElementById('acc1Transport').value = data.acc1Transport;
+                    if (data.autoPUrl) document.getElementById('autoPUrl').value = data.autoPUrl;
+                    if (data.remoteXmlUrl) document.getElementById('remoteXmlUrl').value = data.remoteXmlUrl;
+                    if (data.remoteXmlName) document.getElementById('remoteXmlName').value = data.remoteXmlName;
+                    
+                    if (data.customParams && Array.isArray(data.customParams)) {
+                        customParams = data.customParams;
+                        renderCustomParams();
+                    }
+
+                    updateConfig();
+                    showToast('Configuration loaded!');
+                } catch (err) {
+                    showToast('Invalid JSON preset file!');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Toast feedback display
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        // Initialize on window load
+        window.onload = function() {
+            renderCustomParams();
+            updateConfig();
+        };
+    </script>
+</body>
+</html>
